@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LavoVoz</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0f0e0c; --surface:#1a1916; --card:#222118;
+  --accent:#e8d44d; --accent2:#4de8a0; --accent3:#e84d7a;
+  --text:#f0ede4; --muted:#7a7868; --border:#2e2c26;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospace;min-height:100vh;overflow-x:hidden}
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.logo{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800}
+.logo span{color:var(--accent)}
+.header-right{display:flex;align-items:center;gap:16px}
+.sucursal-select{background:var(--card);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.75rem;padding:6px 12px;border-radius:6px;cursor:pointer}
+.stats{display:flex;gap:20px;font-size:0.7rem;color:var(--muted)}
+.stat-val{color:var(--accent);font-size:1rem;font-weight:700;display:block}
+main{display:grid;grid-template-columns:1fr 360px;height:calc(100vh - 61px)}
+.voice-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px;gap:24px;border-right:1px solid var(--border)}
+.mic-wrapper{position:relative;display:flex;align-items:center;justify-content:center}
+.mic-ring{position:absolute;border-radius:50%;border:1px solid var(--accent);opacity:0}
+.r1{width:170px;height:170px} .r2{width:220px;height:220px} .r3{width:270px;height:270px}
+.listening .r1{animation:pulse 1.5s ease-out infinite}
+.listening .r2{animation:pulse 1.5s ease-out .3s infinite}
+.listening .r3{animation:pulse 1.5s ease-out .6s infinite}
+@keyframes pulse{0%{opacity:.6;transform:scale(.85)}100%{opacity:0;transform:scale(1.1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{50%{opacity:0}}
+.mic-btn{position:relative;z-index:2;width:130px;height:130px;border-radius:50%;border:2px solid var(--border);background:var(--card);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:all .2s;font-family:'IBM Plex Mono',monospace}
+.mic-btn.on{border-color:var(--accent);background:var(--accent);box-shadow:0 0 40px rgba(232,212,77,.25)}
+.mic-btn .icon{font-size:2.2rem;line-height:1}
+.mic-btn.on .icon{filter:invert(1) brightness(0)}
+.mic-label{font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.mic-btn.on .mic-label{color:#333}
+.transcript-box{width:100%;max-width:480px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;min-height:80px}
+.tlabel{font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+#transcript{font-size:.95rem;line-height:1.6;min-height:36px}
+.cursor{display:inline-block;width:2px;height:1em;background:var(--accent);margin-left:2px;vertical-align:text-bottom;animation:blink 1s step-end infinite}
+.status-row{display:flex;align-items:center;gap:10px;font-size:.72rem;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:#3a3830;transition:all .3s}
+.dot.on{background:var(--accent2);box-shadow:0 0 8px var(--accent2)}
+.dot.proc{background:var(--accent);animation:blink .5s step-end infinite}
+.action-row{display:flex;gap:10px}
+.btn-primary{background:var(--accent);color:#0f0e0c;border:none;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:.8rem;letter-spacing:1px;padding:12px 24px;border-radius:6px;cursor:pointer;transition:all .2s}
+.btn-primary:hover{background:#f5e05a;transform:translateY(-1px)}
+.btn-secondary{background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:1px;padding:12px 16px;border-radius:6px;cursor:pointer;transition:all .2s}
+.btn-secondary:hover{border-color:var(--accent2);color:var(--accent2)}
+.hint{font-size:.68rem;color:var(--muted);text-align:center;line-height:1.9;max-width:380px}
+.hint strong{color:var(--text)}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+.orders-panel{background:var(--surface);display:flex;flex-direction:column;overflow:hidden}
+.orders-header{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.orders-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem}
+.orders-actions{display:flex;gap:8px}
+.btn-sm{background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:1px;padding:5px 10px;border-radius:4px;cursor:pointer;transition:all .2s}
+.btn-sm.green{border-color:var(--accent2);color:var(--accent2)}
+.orders-list{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.orders-list::-webkit-scrollbar{width:3px}
+.orders-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.order-card{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:10px;padding:14px;animation:slideIn .3s ease-out}
+@keyframes slideIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.card-num{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;color:var(--accent)}
+.card-time{font-size:.6rem;color:var(--muted)}
+.card-client{font-size:.85rem;font-weight:500;margin-bottom:6px}
+.card-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.tag{font-size:.58rem;letter-spacing:1px;text-transform:uppercase;padding:3px 7px;border-radius:3px;font-weight:500}
+.tag-srv{background:rgba(232,212,77,.12);color:var(--accent);border:1px solid rgba(232,212,77,.2)}
+.tag-urg{background:rgba(232,77,122,.12);color:var(--accent3);border:1px solid rgba(232,77,122,.2)}
+.tag-qty{background:rgba(77,232,160,.12);color:var(--accent2);border:1px solid rgba(77,232,160,.2)}
+.card-notes{font-size:.72rem;color:var(--muted);line-height:1.5;font-style:italic}
+.estado-select{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:.6rem;padding:3px 6px;border-radius:4px;cursor:pointer;margin-top:8px}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);gap:10px;text-align:center;padding:32px}
+.empty-icon{font-size:2.5rem;opacity:.3}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--accent2);color:#0f0e0c;padding:9px 18px;border-radius:6px;font-size:.75rem;font-weight:600;letter-spacing:1px;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+@media(max-width:768px){main{grid-template-columns:1fr;grid-template-rows:auto 1fr;height:auto}.orders-panel{min-height:60vh}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Lavo<span>Voz</span></div>
+  <div class="header-right">
+    <select class="sucursal-select" id="sucursal-select">
+      <option value="principal">Sucursal Principal</option>
+      <option value="sucursal2">Sucursal 2</option>
+      <option value="sucursal3">Sucursal 3</option>
+      <option value="sucursal4">Sucursal 4</option>
+      <option value="sucursal5">Sucursal 5</option>
+    </select>
+    <div class="stats">
+      <div><span class="stat-val" id="stat-pedidos">0</span>pedidos</div>
+      <div><span class="stat-val" id="stat-piezas">0</span>prendas</div>
+      <div><span class="stat-val" id="stat-urgentes">0</span>urgentes</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="voice-panel">
+    <div class="mic-wrapper" id="mic-wrapper">
+      <div class="mic-ring r1"></div>
+      <div class="mic-ring r2"></div>
+      <div class="mic-ring r3"></div>
+      <button class="mic-btn" id="mic-btn" onclick="toggleMic()">
+        <span class="icon">🎙️</span>
+        <span class="mic-label" id="mic-label">Hablar</span>
+      </button>
+    </div>
+
+    <div class="transcript-box">
+      <div class="tlabel">// transcripción en vivo</div>
+      <div id="transcript"><span style="color:var(--muted)">Presiona el micrófono y dicta el pedido...</span></div>
+    </div>
+
+    <div class="status-row">
+      <div class="dot" id="dot"></div>
+      <span id="status-text">Listo para escuchar</span>
+    </div>
+
+    <div class="action-row" id="action-row" style="display:none">
+      <button class="btn-primary" onclick="procesarPedido()">⚡ Registrar pedido</button>
+      <button class="btn-secondary" onclick="cancelar()">Cancelar</button>
+    </div>
+
+    <div id="spinner-row" style="display:none;align-items:center;gap:10px;font-size:.72rem;color:var(--muted)">
+      <div class="spinner"></div>
+      Interpretando con IA...
+    </div>
+
+    <p class="hint">
+      Ejemplo: <strong>"Orden 12 para María López, 3 camisas planchadas, urgente"</strong>
+    </p>
+  </section>
+
+  <section class="orders-panel">
+    <div class="orders-header">
+      <span class="orders-title">Pedidos del día</span>
+      <div class="orders-actions">
+        <button class="btn-sm green" onclick="descargarCSV()">⬇ CSV</button>
+        <button class="btn-sm" onclick="cargarPedidos()">↻ Actualizar</button>
+      </div>
+    </div>
+    <div class="orders-list" id="orders-list">
+      <div class="empty-state"><div class="empty-icon">🫧</div><div>Cargando pedidos...</div></div>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+// Cambiar por tu URL de Railway cuando despliegues
+const API = window.location.hostname === 'localhost'
+  ? 'http://localhost:3001/api'
+  : 'https://TU-BACKEND.railway.app/api';  // ← reemplazar
+
+let recognition = null;
+let isListening = false;
+let transcriptFinal = '';
+let pedidosData = [];
+
+// ── Micrófono ─────────────────────────────────────────────────────────────────
+function setupRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast('⚠️ Usa Chrome o Edge'); return null; }
+  const r = new SR();
+  r.lang = 'es-PE';
+  r.continuous = true;
+  r.interimResults = true;
+  r.onresult = (e) => {
+    let final = '', interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    if (final) transcriptFinal += final + ' ';
+    const display = transcriptFinal + interim;
+    const el = document.getElementById('transcript');
+    el.innerHTML = display
+      ? esc(display) + '<span class="cursor"></span>'
+      : '';
+    if (transcriptFinal.trim().length > 3) {
+      document.getElementById('action-row').style.display = 'flex';
+    }
+  };
+  r.onerror = (e) => { if (e.error !== 'no-speech') toast('Error: ' + e.error); };
+  r.onend = () => { if (recognition?._active) r.start(); };
+  return r;
+}
+
+function toggleMic() {
+  if (isListening) {
+    stopMic();
+  } else {
+    transcriptFinal = '';
+    document.getElementById('transcript').innerHTML = '<span class="cursor"></span>';
+    document.getElementById('action-row').style.display = 'none';
+    recognition = setupRecognition();
+    if (!recognition) return;
+    recognition._active = true;
+    recognition.start();
+    isListening = true;
+    setStatus('listening');
+  }
+}
+
+function stopMic() {
+  if (recognition) { recognition._active = false; recognition.stop(); }
+  isListening = false;
+  setStatus('idle');
+}
+
+function cancelar() {
+  stopMic();
+  transcriptFinal = '';
+  document.getElementById('transcript').innerHTML = '<span style="color:var(--muted)">Presiona el micrófono y dicta el pedido...</span>';
+  document.getElementById('action-row').style.display = 'none';
+}
+
+function setStatus(s) {
+  const dot = document.getElementById('dot');
+  const txt = document.getElementById('status-text');
+  const btn = document.getElementById('mic-btn');
+  const wrap = document.getElementById('mic-wrapper');
+  const label = document.getElementById('mic-label');
+  dot.className = 'dot';
+  btn.classList.remove('on');
+  wrap.classList.remove('listening');
+  if (s === 'listening') {
+    dot.classList.add('on'); txt.textContent = 'Escuchando...';
+    btn.classList.add('on'); wrap.classList.add('listening');
+    label.textContent = 'Parar';
+  } else if (s === 'processing') {
+    dot.classList.add('proc'); txt.textContent = 'Procesando...';
+    label.textContent = 'Hablar';
+  } else {
+    txt.textContent = 'Listo para escuchar';
+    label.textContent = 'Hablar';
+  }
+}
+
+// ── Procesar pedido ───────────────────────────────────────────────────────────
+async function procesarPedido() {
+  const text = transcriptFinal.trim();
+  if (!text) { toast('No hay texto'); return; }
+  stopMic();
+  setStatus('processing');
+  document.getElementById('action-row').style.display = 'none';
+  document.getElementById('spinner-row').style.display = 'flex';
+
+  const sucursal = document.getElementById('sucursal-select').value;
+
+  try {
+    const res = await fetch(`${API}/pedidos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transcript: text, sucursalId: sucursal }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    toast('✅ Pedido registrado');
+    cancelar();
+    await cargarPedidos();
+    await cargarResumen();
+  } catch (err) {
+    toast('⚠️ Error: ' + err.message);
+    setStatus('idle');
+    document.getElementById('action-row').style.display = 'flex';
+  } finally {
+    document.getElementById('spinner-row').style.display = 'none';
+  }
+}
+
+// ── Cargar pedidos ────────────────────────────────────────────────────────────
+async function cargarPedidos() {
+  const sucursal = document.getElementById('sucursal-select').value;
+  const hoy = new Date().toISOString().split('T')[0];
+  try {
+    const res = await fetch(`${API}/historial?sucursal=${sucursal}&fecha_desde=${hoy}&limit=100`);
+    const data = await res.json();
+    pedidosData = data.pedidos || [];
+    renderPedidos();
+  } catch (err) {
+    console.error('Error cargando pedidos:', err);
+  }
+}
+
+async function cargarResumen() {
+  const sucursal = document.getElementById('sucursal-select').value;
+  try {
+    const res = await fetch(`${API}/historial/resumen?sucursal=${sucursal}`);
+    const data = await res.json();
+    document.getElementById('stat-pedidos').textContent = data.totalPedidos || 0;
+    document.getElementById('stat-piezas').textContent = data.totalPiezas || 0;
+    document.getElementById('stat-urgentes').textContent = data.urgentes || 0;
+  } catch {}
+}
+
+function renderPedidos() {
+  const list = document.getElementById('orders-list');
+  if (!pedidosData.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🫧</div><div>No hay pedidos hoy.</div></div>';
+    return;
+  }
+  list.innerHTML = pedidosData.map((p, i) => {
+    const num = String(pedidosData.length - i).padStart(3, '0');
+    const time = new Date(p.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+    const prendas = Array.isArray(p.prendas) && p.prendas.length
+      ? p.prendas.map(x => `${x.cantidad}x ${x.tipo}`).join(', ')
+      : (p.transcript_original || '').substring(0, 60);
+    const orden = p.numero_orden_cliente ? ` <span style="font-size:.62rem;color:var(--muted)">· orden #${esc(p.numero_orden_cliente)}</span>` : '';
+    const tel = p.telefono ? ` <span style="font-size:.62rem;color:var(--muted)">📞 ${esc(p.telefono)}</span>` : '';
+    return `<div class="order-card" data-id="${p.id}">
+      <div class="card-top">
+        <div><span class="card-num">#${num}</span>${orden}</div>
+        <span class="card-time">${time}</span>
+      </div>
+      <div class="card-client">👤 ${esc(p.cliente)}${tel}</div>
+      <div class="card-tags">
+        <span class="tag tag-srv">${esc(p.servicio)}</span>
+        ${p.urgente ? '<span class="tag tag-urg">🔥 urgente</span>' : ''}
+        ${p.total_piezas ? `<span class="tag tag-qty">${p.total_piezas} piezas</span>` : ''}
+      </div>
+      <div class="card-notes">🧺 ${esc(prendas)}${p.notas ? ' · ' + esc(p.notas) : ''}</div>
+      <select class="estado-select" onchange="cambiarEstado('${p.id}', this.value)">
+        <option value="pendiente"   ${p.estado==='pendiente'?'selected':''}>⏳ Pendiente</option>
+        <option value="en_proceso"  ${p.estado==='en_proceso'?'selected':''}>🔄 En proceso</option>
+        <option value="listo"       ${p.estado==='listo'?'selected':''}>✅ Listo</option>
+        <option value="entregado"   ${p.estado==='entregado'?'selected':''}>🚗 Entregado</option>
+      </select>
+    </div>`;
+  }).join('');
+}
+
+async function cambiarEstado(id, estado) {
+  try {
+    await fetch(`${API}/pedidos/${id}/estado`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado }),
+    });
+    toast('Estado actualizado');
+    await cargarResumen();
+  } catch { toast('Error actualizando estado'); }
+}
+
+// ── CSV ───────────────────────────────────────────────────────────────────────
+function descargarCSV() {
+  if (!pedidosData.length) { toast('No hay pedidos'); return; }
+  const headers = ['#','Hora','Cliente','Telefono','Orden Cliente','Servicio','Prendas','Piezas','Urgente','Estado','Notas'];
+  const rows = pedidosData.map((p, i) => {
+    const time = new Date(p.created_at).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'});
+    const prendas = Array.isArray(p.prendas) ? p.prendas.map(x=>`${x.cantidad}x ${x.tipo}`).join(' | ') : '';
+    return [
+      pedidosData.length - i, time, p.cliente, p.telefono||'', p.numero_orden_cliente||'',
+      p.servicio, prendas, p.total_piezas, p.urgente?'Sí':'No', p.estado, p.notas||''
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(',');
+  });
+  const csv = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `pedidos-${new Date().toLocaleDateString('es-PE').replace(/\//g,'-')}.csv`;
+  a.click();
+  toast('CSV descargado');
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function toast(msg, dur=2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), dur);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.getElementById('sucursal-select').addEventListener('change', () => {
+  cargarPedidos(); cargarResumen();
+});
+
+cargarPedidos();
+cargarResumen();
+setInterval(cargarPedidos, 30000); // auto-refresh cada 30s
+</script>
+</body>
+</html>
