@@ -44,12 +44,13 @@ router.get('/', async (req, res) => {
 // Resumen del día: total pedidos, piezas, urgentes
 router.get('/resumen', async (req, res) => {
   const { sucursal } = req.query;
-  const hoy = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const hoy = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 
   let query = supabase
     .from('pedidos')
     .select('estado, urgente, total_piezas')
-    .gte('created_at', hoy + 'T00:00:00');
+    .gte('created_at', hoy + 'T00:00:00-05:00');
 
   if (sucursal) query = query.eq('sucursal_id', sucursal);
 

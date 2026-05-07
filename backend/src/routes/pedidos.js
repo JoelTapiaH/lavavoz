@@ -21,7 +21,7 @@ router.post('/', async (req, res) => {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 512,
-      system: `Eres el asistente de una lavandería profesional. 
+      system: `Eres el asistente de una lavandería profesional.
 Extrae los datos de pedidos dictados por voz y responde SOLO con JSON válido, sin markdown ni explicaciones.
 Formato exacto:
 {
@@ -31,6 +31,7 @@ Formato exacto:
   "prendas": [{"tipo": "camisa", "cantidad": 3}],
   "servicio": "lavado normal | lavado a mano | lavado en seco | planchado | lavado+planchado",
   "urgente": true,
+  "horaEntrega": "HH:MM en formato 24h o null. Ejemplos: 'a las 3' → '15:00', 'a las 3 de la tarde' → '15:00', 'al mediodía' → '12:00', 'a las 8 de la mañana' → '08:00'",
   "notas": "instrucciones especiales o null",
   "totalPiezas": 3
 }`,
@@ -54,6 +55,7 @@ Formato exacto:
         prendas: pedidoData.prendas || [],
         total_piezas: pedidoData.totalPiezas || 0,
         urgente: pedidoData.urgente || false,
+        hora_entrega: pedidoData.horaEntrega || null,
         notas: pedidoData.notas || null,
         transcript_original: transcript,
         estado: 'pendiente',
