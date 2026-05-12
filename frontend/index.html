@@ -99,18 +99,14 @@ main{display:grid;grid-template-columns:1fr 360px;flex:1;min-height:0;overflow:h
 .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
 .big-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden;animation:fadeUp .25s ease-out;box-shadow:0 2px 12px rgba(12,31,61,.07)}
 .big-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px}
-.big-card.pendiente::before{background:var(--accent)}
-.big-card.en_proceso::before{background:#29abe2}
-.big-card.listo::before{background:var(--accent2)}
-.big-card.entregado{opacity:.5}
-.big-card.entregado::before{background:var(--muted)}
+.big-card.iniciado::before{background:#29abe2}
+.big-card.finalizado::before{background:var(--accent2)}
+.big-card.finalizado{opacity:.6}
 .big-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .big-card-client{font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;line-height:1.2}
 .sbadge{font-size:.52rem;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:20px;font-weight:600;white-space:nowrap;flex-shrink:0}
-.sbadge.pendiente{background:rgba(232,25,26,.15);color:var(--accent)}
-.sbadge.en_proceso{background:rgba(77,158,232,.15);color:#29abe2}
-.sbadge.listo{background:rgba(23,184,112,.15);color:var(--accent2)}
-.sbadge.entregado{background:rgba(122,120,104,.15);color:var(--muted)}
+.sbadge.iniciado{background:rgba(41,171,226,.15);color:#29abe2}
+.sbadge.finalizado{background:rgba(23,184,112,.15);color:var(--accent2)}
 .big-card-urg{font-size:.62rem;color:var(--accent3);font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
 .big-card-hora{display:flex;align-items:baseline;gap:6px;background:rgba(232,25,26,.08);border:1px solid rgba(232,25,26,.2);border-radius:8px;padding:8px 14px}
 .big-card-hora-val{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;color:var(--accent);line-height:1}
@@ -120,12 +116,8 @@ main{display:grid;grid-template-columns:1fr 360px;flex:1;min-height:0;overflow:h
 .act-btn{width:100%;padding:13px;border-radius:8px;border:none;font-family:'IBM Plex Mono',monospace;font-size:.72rem;font-weight:700;letter-spacing:1.5px;cursor:pointer;transition:all .2s;text-transform:uppercase;margin-top:4px}
 .act-btn:hover{transform:translateY(-2px)}
 .act-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.act-btn.iniciar{background:rgba(77,158,232,.12);color:#29abe2;border:1px solid rgba(77,158,232,.3)}
-.act-btn.iniciar:hover:not(:disabled){background:#29abe2;color:#0f0e0c}
-.act-btn.marcar-listo{background:rgba(23,184,112,.12);color:var(--accent2);border:1px solid rgba(23,184,112,.3)}
-.act-btn.marcar-listo:hover:not(:disabled){background:var(--accent2);color:#0f0e0c}
-.act-btn.entregar{background:rgba(232,25,26,.12);color:var(--accent);border:1px solid rgba(232,25,26,.3)}
-.act-btn.entregar:hover:not(:disabled){background:var(--accent);color:#0f0e0c}
+.act-btn.finalizar{background:rgba(23,184,112,.12);color:var(--accent2);border:1px solid rgba(23,184,112,.3)}
+.act-btn.finalizar:hover:not(:disabled){background:var(--accent2);color:#fff}
 
 /* ── Toast & responsive ─────────────────────────────────────────────────────── */
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--accent2);color:#0f0e0c;padding:9px 18px;border-radius:6px;font-size:.75rem;font-weight:600;letter-spacing:1px;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none}
@@ -151,6 +143,7 @@ main{display:grid;grid-template-columns:1fr 360px;flex:1;min-height:0;overflow:h
       <option value="sucursal4">Sucursal 4</option>
       <option value="sucursal5">Sucursal 5</option>
     </select>
+    <input type="date" class="sucursal-select" id="fecha-select">
     <div class="stats">
       <div><span class="stat-val" id="stat-pedidos">0</span>pedidos</div>
       <div><span class="stat-val" id="stat-piezas">0</span>prendas</div>
@@ -224,10 +217,8 @@ main{display:grid;grid-template-columns:1fr 360px;flex:1;min-height:0;overflow:h
     <div class="filter-row">
       <span class="filter-label">Estado:</span>
       <button class="filter-btn active" onclick="setFiltro('todos', this)">Todos</button>
-      <button class="filter-btn" onclick="setFiltro('pendiente', this)">⏳ Pendiente</button>
-      <button class="filter-btn" onclick="setFiltro('en_proceso', this)">🔄 En proceso</button>
-      <button class="filter-btn" onclick="setFiltro('listo', this)">✅ Listo</button>
-      <button class="filter-btn" onclick="setFiltro('entregado', this)">🚗 Entregado</button>
+      <button class="filter-btn" onclick="setFiltro('iniciado', this)">🔵 Iniciado</button>
+      <button class="filter-btn" onclick="setFiltro('finalizado', this)">✅ Finalizado</button>
     </div>
     <div class="cards-grid" id="cards-grid">
       <div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🫧</div><div>Cargando...</div></div>
@@ -374,12 +365,12 @@ async function procesarPedido() {
 // ── Cargar pedidos ────────────────────────────────────────────────────────────
 async function cargarPedidos() {
   const sucursal = document.getElementById('sucursal-select').value;
-  const now = new Date();
-  const hoy = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const fecha = document.getElementById('fecha-select').value;
   try {
-    const res = await fetch(`${API}/historial?sucursal=${sucursal}&fecha_desde=${hoy}&limit=100`);
+    const res = await fetch(`${API}/historial?sucursal=${sucursal}&fecha_desde=${fecha}&fecha_hasta=${fecha}&limit=200`);
     const data = await res.json();
     pedidosData = data.pedidos || [];
+    document.querySelector('.orders-title').textContent = `Pedidos — ${fecha}`;
     renderPedidos();
     renderBigCards();
   } catch (err) {
@@ -427,10 +418,8 @@ function renderPedidos() {
       ${p.hora_entrega ? `<div style="font-size:.78rem;color:var(--accent);font-weight:700;margin-top:4px">🕐 Entrega: ${esc(p.hora_entrega)}</div>` : ''}
       <div class="card-notes">🧺 ${esc(prendas)}${p.notas ? ' · ' + esc(p.notas) : ''}</div>
       <select class="estado-select" onchange="cambiarEstado('${p.id}', this.value)">
-        <option value="pendiente"   ${p.estado==='pendiente'?'selected':''}>⏳ Pendiente</option>
-        <option value="en_proceso"  ${p.estado==='en_proceso'?'selected':''}>🔄 En proceso</option>
-        <option value="listo"       ${p.estado==='listo'?'selected':''}>✅ Listo</option>
-        <option value="entregado"   ${p.estado==='entregado'?'selected':''}>🚗 Entregado</option>
+        <option value="iniciado"   ${p.estado==='iniciado'?'selected':''}>🔵 Iniciado</option>
+        <option value="finalizado" ${p.estado==='finalizado'?'selected':''}>✅ Finalizado</option>
       </select>
     </div>`;
   }).join('');
@@ -438,12 +427,10 @@ function renderPedidos() {
 
 // ── Render cards grandes (tab 2) ──────────────────────────────────────────────
 const ESTADO_LABELS = {
-  pendiente: 'Pendiente', en_proceso: 'En proceso', listo: 'Listo', entregado: 'Entregado'
+  iniciado: 'Iniciado', finalizado: 'Finalizado'
 };
 const SIGUIENTE = {
-  pendiente:  { next: 'en_proceso', label: '▶ Iniciar',      cls: 'iniciar' },
-  en_proceso: { next: 'listo',      label: '✓ Marcar listo', cls: 'marcar-listo' },
-  listo:      { next: 'entregado',  label: '🚗 Entregar',    cls: 'entregar' },
+  iniciado: { next: 'finalizado', label: '✓ Marcar finalizado', cls: 'finalizar' },
 };
 
 function setFiltro(f, btn) {
@@ -560,9 +547,12 @@ function toast(msg, dur=2800) {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-document.getElementById('sucursal-select').addEventListener('change', () => {
-  cargarPedidos(); cargarResumen();
-});
+const _now = new Date();
+document.getElementById('fecha-select').value =
+  `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
+
+document.getElementById('sucursal-select').addEventListener('change', () => { cargarPedidos(); cargarResumen(); });
+document.getElementById('fecha-select').addEventListener('change', () => { cargarPedidos(); cargarResumen(); });
 
 cargarPedidos();
 cargarResumen();

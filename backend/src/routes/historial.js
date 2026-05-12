@@ -61,10 +61,8 @@ router.get('/resumen', async (req, res) => {
     totalPedidos: data.length,
     totalPiezas: data.reduce((s, p) => s + (p.total_piezas || 0), 0),
     urgentes: data.filter(p => p.urgente).length,
-    pendientes: data.filter(p => p.estado === 'pendiente').length,
-    en_proceso: data.filter(p => p.estado === 'en_proceso').length,
-    listos: data.filter(p => p.estado === 'listo').length,
-    entregados: data.filter(p => p.estado === 'entregado').length,
+    iniciados: data.filter(p => p.estado === 'iniciado').length,
+    finalizados: data.filter(p => p.estado === 'finalizado').length,
   };
 
   res.json(resumen);
