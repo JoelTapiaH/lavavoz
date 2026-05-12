@@ -260,10 +260,11 @@ function switchTab(tab, btn) {
 // ── Micrófono ─────────────────────────────────────────────────────────────────
 function setupRecognition() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { toast('⚠️ Usa Chrome o Edge'); return null; }
+  if (!SR) { toast('⚠️ Navegador no compatible'); return null; }
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
   const r = new SR();
   r.lang = 'es-PE';
-  r.continuous = true;
+  r.continuous = !isSafari;
   r.interimResults = true;
   r.onresult = (e) => {
     let final = '', interim = '';
@@ -282,7 +283,13 @@ function setupRecognition() {
     }
   };
   r.onerror = (e) => { if (e.error !== 'no-speech') toast('Error: ' + e.error); };
-  r.onend = () => { if (recognition?._active) r.start(); };
+  r.onend = () => {
+    if (recognition?._active && !isSafari) r.start();
+    else if (recognition?._active && isSafari) {
+      isListening = false;
+      setStatus('idle');
+    }
+  };
   return r;
 }
 
