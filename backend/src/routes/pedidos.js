@@ -94,6 +94,22 @@ router.patch('/:id/estado', async (req, res) => {
   res.json({ ok: true, pedido: data });
 });
 
+// ── PATCH /api/pedidos/:id/comentario ────────────────────────────────────────
+router.patch('/:id/comentario', async (req, res) => {
+  const { comentario } = req.body;
+  if (typeof comentario !== 'string') {
+    return res.status(400).json({ error: 'Comentario inválido.' });
+  }
+  const { data, error } = await supabase
+    .from('pedidos')
+    .update({ comentario_staff: comentario.trim() })
+    .eq('id', req.params.id)
+    .select()
+    .single();
+  if (error) return res.status(404).json({ error: 'Pedido no encontrado.' });
+  res.json({ ok: true, pedido: data });
+});
+
 // ── DELETE /api/pedidos/:id ───────────────────────────────────────────────────
 router.delete('/:id', async (req, res) => {
   const { data, error } = await supabase
