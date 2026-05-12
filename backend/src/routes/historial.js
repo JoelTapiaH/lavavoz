@@ -20,6 +20,7 @@ router.get('/', async (req, res) => {
   let query = supabase
     .from('pedidos')
     .select('*', { count: 'exact' })
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .range(offset, offset + parseInt(limit) - 1);
 
@@ -50,6 +51,7 @@ router.get('/resumen', async (req, res) => {
   let query = supabase
     .from('pedidos')
     .select('estado, urgente, total_piezas')
+    .is('deleted_at', null)
     .gte('created_at', hoy + 'T00:00:00-05:00');
 
   if (sucursal) query = query.eq('sucursal_id', sucursal);

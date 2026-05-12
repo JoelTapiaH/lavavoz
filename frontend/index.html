@@ -90,6 +90,9 @@ main{display:grid;grid-template-columns:1fr 560px;flex:1;min-height:0;overflow:h
 .comment-btn{background:none;border:1px dashed var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:.62rem;padding:5px 10px;border-radius:5px;cursor:pointer;transition:all .2s;text-align:left}
 .comment-btn:hover{border-color:#29abe2;color:#29abe2}
 .comment-btn.recording{border-color:#e8191a;color:#e8191a;border-style:solid;animation:blink .6s step-end infinite}
+.delete-btn{background:none;border:none;color:var(--muted);font-size:.7rem;cursor:pointer;padding:4px 6px;border-radius:4px;transition:all .2s;line-height:1}
+.delete-btn:hover{color:var(--accent3);background:rgba(232,77,122,.08)}
+.delete-btn.confirm{color:var(--accent);font-weight:700;background:rgba(232,25,26,.08)}
 .empty-icon{font-size:2.5rem;opacity:.3}
 
 /* ── Vista Pedidos (tab 2) ──────────────────────────────────────────────────── */
@@ -412,7 +415,10 @@ function renderPedidos() {
     return `<div class="order-card" data-id="${p.id}">
       <div class="card-top">
         <div><span class="card-num">#${num}</span>${orden}</div>
-        <span class="card-time">${time}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="card-time">${time}</span>
+          <button class="delete-btn" id="del-${p.id}" onclick="eliminarPedido('${p.id}', this)" title="Eliminar">🗑</button>
+        </div>
       </div>
       <div class="card-client">👤 ${esc(p.cliente)}${tel}</div>
       <div class="card-tags">
@@ -473,7 +479,10 @@ function renderBigCards() {
     return `<div class="big-card ${p.estado}" id="bcard-${p.id}">
       <div class="big-card-top">
         <div class="big-card-client">👤 ${esc(p.cliente)}</div>
-        <span class="sbadge ${p.estado}">${ESTADO_LABELS[p.estado]}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="sbadge ${p.estado}">${ESTADO_LABELS[p.estado]}</span>
+          <button class="delete-btn" id="del2-${p.id}" onclick="eliminarPedido('${p.id}', this)" title="Eliminar">🗑</button>
+        </div>
       </div>
       ${p.hora_entrega ? `<div class="big-card-hora"><span class="big-card-hora-val">🕐 ${esc(p.hora_entrega)}</span><span class="big-card-hora-lbl">entrega</span></div>` : ''}
       ${p.urgente ? '<div class="big-card-urg">🔥 urgente</div>' : ''}
@@ -511,6 +520,31 @@ async function avanzarEstado(id, nuevoEstado, btn) {
     toast('Error actualizando estado');
     btn.disabled = false;
   }
+}
+
+let _deleteTimers = {};
+function eliminarPedido(id, btn) {
+  if (!_deleteTimers[id]) {
+    btn.classList.add('confirm');
+    btn.textContent = '¿Seguro?';
+    _deleteTimers[id] = setTimeout(() => {
+      btn.classList.remove('confirm');
+      btn.textContent = '🗑';
+      delete _deleteTimers[id];
+    }, 3000);
+    return;
+  }
+  clearTimeout(_deleteTimers[id]);
+  delete _deleteTimers[id];
+  fetch(`${API}/pedidos/${id}`, { method: 'DELETE' })
+    .then(() => {
+      pedidosData = pedidosData.filter(p => p.id !== id);
+      toast('Pedido eliminado');
+      renderPedidos();
+      renderBigCards();
+      cargarResumen();
+    })
+    .catch(() => toast('Error eliminando pedido'));
 }
 
 function dictarComentario(id) {

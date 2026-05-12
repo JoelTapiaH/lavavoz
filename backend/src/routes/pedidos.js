@@ -110,11 +110,11 @@ router.patch('/:id/comentario', async (req, res) => {
   res.json({ ok: true, pedido: data });
 });
 
-// ── DELETE /api/pedidos/:id ───────────────────────────────────────────────────
+// ── DELETE /api/pedidos/:id (soft delete) ─────────────────────────────────────
 router.delete('/:id', async (req, res) => {
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('pedidos')
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq('id', req.params.id);
 
   if (error) return res.status(404).json({ error: 'Pedido no encontrado.' });
