@@ -144,6 +144,7 @@ main{display:grid;grid-template-columns:1fr 560px;flex:1;min-height:0;overflow:h
 <header>
   <div class="logo"><img src="logo.jpeg" alt="Lavandería Liz"></div>
   <div class="header-right">
+    <button id="notif-btn" onclick="toggleNotificaciones()" style="background:none;border:1px solid var(--border);font-size:1.1rem;cursor:pointer;padding:5px 10px;border-radius:6px;transition:all .2s;color:var(--muted)" title="Activar alertas de nuevo pedido">🔔</button>
     <select class="sucursal-select" id="sucursal-select">
       <option value="principal">Sucursal Principal</option>
       <option value="sucursal2">Sucursal 2</option>
@@ -247,6 +248,89 @@ let isListening = false;
 let transcriptFinal = '';
 let pedidosData = [];
 let filtroActivo = 'todos';
+
+// ── Notificaciones ─────────────────────────────────────────────────────────────
+let _knownIds = new Set();
+let _notifEnabled = false;
+
+function initNotificaciones() {
+  if (!('Notification' in window)) return;
+  _notifEnabled = Notification.permission === 'granted';
+  actualizarBellBtn();
+}
+
+function actualizarBellBtn() {
+  const btn = document.getElementById('notif-btn');
+  if (!btn) return;
+  if (!('Notification' in window)) { btn.style.display = 'none'; return; }
+  if (Notification.permission === 'granted' && _notifEnabled) {
+    btn.textContent = '🔔';
+    btn.title = 'Notificaciones activas — clic para pausar';
+    btn.style.borderColor = 'var(--accent2)';
+    btn.style.color = 'var(--accent2)';
+  } else {
+    btn.textContent = '🔕';
+    btn.title = 'Activar notificaciones de nuevo pedido';
+    btn.style.borderColor = 'var(--border)';
+    btn.style.color = 'var(--muted)';
+  }
+}
+
+async function toggleNotificaciones() {
+  if (!('Notification' in window)) { toast('⚠️ Tu navegador no soporta notificaciones'); return; }
+  if (Notification.permission === 'denied') {
+    toast('🔕 Activa los permisos en ajustes del navegador');
+    return;
+  }
+  if (Notification.permission !== 'granted') {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { toast('⚠️ Permiso denegado'); actualizarBellBtn(); return; }
+  }
+  _notifEnabled = !_notifEnabled;
+  toast(_notifEnabled ? '🔔 Alertas activadas' : '🔕 Alertas pausadas');
+  actualizarBellBtn();
+}
+
+function sonarAlarma() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [[880, 0], [1100, 0.22]].forEach(([freq, delay]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.35, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.5);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.5);
+    });
+  } catch {}
+}
+
+function notificarNuevoPedido(pedido) {
+  sonarAlarma();
+  if (!_notifEnabled || Notification.permission !== 'granted') return;
+  if (document.hasFocus()) return;
+  new Notification('🧺 Nuevo pedido — LavoVoz', {
+    body: `${pedido.cliente} · ${pedido.servicio}${pedido.urgente ? ' 🔥 URGENTE' : ''}`,
+    icon: '/logo.jpeg',
+  });
+}
+
+function verificarNuevosPedidos(nuevos) {
+  if (_knownIds.size === 0) {
+    nuevos.forEach(p => _knownIds.add(p.id));
+    return;
+  }
+  nuevos.forEach(p => {
+    if (!_knownIds.has(p.id)) {
+      _knownIds.add(p.id);
+      notificarNuevoPedido(p);
+    }
+  });
+}
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 function switchTab(tab, btn) {
@@ -385,6 +469,7 @@ async function cargarPedidos() {
     const res = await fetch(`${API}/historial?sucursal=${sucursal}&fecha_desde=${fecha}&fecha_hasta=${fecha}&limit=200`);
     const data = await res.json();
     pedidosData = data.pedidos || [];
+    verificarNuevosPedidos(pedidosData);
     document.querySelector('.orders-title').textContent = `Pedidos — ${fecha}`;
     renderPedidos();
     renderBigCards();
@@ -644,6 +729,7 @@ document.getElementById('fecha-select').value =
 document.getElementById('sucursal-select').addEventListener('change', () => { cargarPedidos(); cargarResumen(); });
 document.getElementById('fecha-select').addEventListener('change', () => { cargarPedidos(); cargarResumen(); });
 
+initNotificaciones();
 cargarPedidos();
 cargarResumen();
 setInterval(cargarPedidos, 30000);
