@@ -74,7 +74,7 @@ main{display:grid;grid-template-columns:1fr 560px;flex:1;min-height:0;overflow:h
 .orders-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 .order-card{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent2);border-radius:12px;padding:18px;animation:slideIn .3s ease-out;box-shadow:0 2px 8px rgba(12,31,61,.06)}
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
-.card-num{font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;color:var(--accent)}
+.card-num{font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;color:var(--accent)}
 .card-time{font-size:.68rem;color:var(--muted)}
 .card-client{font-size:.95rem;font-weight:500;margin-bottom:8px}
 .card-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
@@ -111,6 +111,7 @@ main{display:grid;grid-template-columns:1fr 560px;flex:1;min-height:0;overflow:h
 .big-card.finalizado::before{background:var(--accent2)}
 .big-card.finalizado{opacity:.6}
 .big-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.big-card-orden{font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;color:var(--accent);line-height:1}
 .big-card-client{font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;line-height:1.2}
 .sbadge{font-size:.52rem;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:20px;font-weight:600;white-space:nowrap;flex-shrink:0}
 .sbadge.iniciado{background:rgba(41,171,226,.15);color:#29abe2}
@@ -502,11 +503,11 @@ function renderPedidos() {
     const prendas = Array.isArray(p.prendas) && p.prendas.length
       ? p.prendas.map(x => `${x.cantidad}x ${x.tipo}`).join(', ')
       : (p.transcript_original || '').substring(0, 60);
-    const orden = p.numero_orden_cliente ? ` <span style="font-size:.62rem;color:var(--muted)">· orden #${esc(p.numero_orden_cliente)}</span>` : '';
+    const orden = p.numero_orden_cliente ? ` <span style="font-size:.65rem;color:var(--muted);font-weight:600">· #${esc(p.numero_orden_cliente)}</span>` : '';
     const tel = p.telefono ? ` <span style="font-size:.62rem;color:var(--muted)">📞 ${esc(p.telefono)}</span>` : '';
     return `<div class="order-card" data-id="${p.id}">
       <div class="card-top">
-        <div><span class="card-num">#${num}</span>${orden}</div>
+        <div style="display:flex;align-items:baseline;gap:8px"><span class="card-num">#${num}</span>${orden}</div>
         <div style="display:flex;align-items:center;gap:6px">
           <span class="card-time">${time}</span>
           <button class="delete-btn" id="del-${p.id}" onclick="eliminarPedido('${p.id}', this)" title="Eliminar">🗑</button>
@@ -524,10 +525,7 @@ function renderPedidos() {
         <option value="iniciado"   ${p.estado==='iniciado'?'selected':''}>🔵 Iniciado</option>
         <option value="finalizado" ${p.estado==='finalizado'?'selected':''}>✅ Finalizado</option>
       </select>
-      <div class="card-comment">
-        ${p.comentario_staff ? `<div class="comment-text">💬 ${esc(p.comentario_staff)}</div>` : ''}
-        <button class="comment-btn" id="cbtn-${p.id}" onclick="dictarComentario('${p.id}')">🎤 ${p.comentario_staff ? 'Actualizar comentario' : 'Agregar comentario'}</button>
-      </div>
+      ${renderComentarios(p.comentario_staff, p.id, 'cbtn-')}
     </div>`;
   }).join('');
 }
@@ -570,7 +568,10 @@ function renderBigCards() {
 
     return `<div class="big-card ${p.estado}" id="bcard-${p.id}">
       <div class="big-card-top">
-        <div class="big-card-client">👤 ${esc(p.cliente)}</div>
+        <div>
+          ${p.numero_orden_cliente ? `<div class="big-card-orden">#${esc(p.numero_orden_cliente)}</div>` : ''}
+          <div class="big-card-client">👤 ${esc(p.cliente)}</div>
+        </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="sbadge ${p.estado}">${ESTADO_LABELS[p.estado]}</span>
           <button class="delete-btn" id="del2-${p.id}" onclick="eliminarPedido('${p.id}', this)" title="Eliminar">🗑</button>
@@ -584,10 +585,7 @@ function renderBigCards() {
         ${p.notas ? `📝 ${esc(p.notas)}<br>` : ''}
         🕐 ${time}${p.telefono ? ` · 📞 ${esc(p.telefono)}` : ''}
       </div>
-      <div class="card-comment">
-        ${p.comentario_staff ? `<div class="comment-text">💬 ${esc(p.comentario_staff)}</div>` : ''}
-        <button class="comment-btn" id="cbtn2-${p.id}" onclick="dictarComentario('${p.id}')">🎤 ${p.comentario_staff ? 'Actualizar comentario' : 'Agregar comentario'}</button>
-      </div>
+      ${renderComentarios(p.comentario_staff, p.id, 'cbtn2-')}
       ${btnHtml}
     </div>`;
   }).join('');
@@ -654,13 +652,14 @@ function dictarComentario(id) {
   r.onresult = async (e) => {
     const texto = e.results[0][0].transcript;
     try {
-      await fetch(`${API}/pedidos/${id}/comentario`, {
+      const res = await fetch(`${API}/pedidos/${id}/comentario`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ comentario: texto }),
       });
+      const data = await res.json();
       const p = pedidosData.find(x => x.id === id);
-      if (p) p.comentario_staff = texto;
+      if (p && data.pedido) p.comentario_staff = data.pedido.comentario_staff;
       toast('💬 Comentario guardado');
       renderPedidos();
       renderBigCards();
@@ -712,6 +711,27 @@ function descargarCSV() {
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
+function parseComentarios(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [{ texto: raw, hora: null }];
+  } catch {
+    return [{ texto: raw, hora: null }];
+  }
+}
+
+function renderComentarios(raw, id, prefix) {
+  const lista = parseComentarios(raw);
+  const items = lista.map(c =>
+    `<div class="comment-text">${c.hora ? `<span style="font-size:.6rem;color:var(--muted);display:block;margin-bottom:2px">${c.hora}</span>` : ''}💬 ${esc(c.texto)}</div>`
+  ).join('');
+  return `<div class="card-comment">
+    ${items}
+    <button class="comment-btn" id="${prefix}${id}" onclick="dictarComentario('${id}')">🎤 Agregar comentario</button>
+  </div>`;
+}
+
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }

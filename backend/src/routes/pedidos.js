@@ -97,16 +97,42 @@ router.patch('/:id/estado', async (req, res) => {
 // ── PATCH /api/pedidos/:id/comentario ────────────────────────────────────────
 router.patch('/:id/comentario', async (req, res) => {
   const { comentario } = req.body;
-  if (typeof comentario !== 'string') {
+  if (typeof comentario !== 'string' || !comentario.trim()) {
     return res.status(400).json({ error: 'Comentario inválido.' });
   }
+
+  const { data: current, error: fetchErr } = await supabase
+    .from('pedidos')
+    .select('comentario_staff')
+    .eq('id', req.params.id)
+    .single();
+
+  if (fetchErr) return res.status(404).json({ error: 'Pedido no encontrado.' });
+
+  let lista = [];
+  if (current.comentario_staff) {
+    try {
+      const parsed = JSON.parse(current.comentario_staff);
+      lista = Array.isArray(parsed) ? parsed : [{ texto: current.comentario_staff, hora: null }];
+    } catch {
+      lista = [{ texto: current.comentario_staff, hora: null }];
+    }
+  }
+
+  const now = new Date();
+  lista.push({
+    texto: comentario.trim(),
+    hora: now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
+  });
+
   const { data, error } = await supabase
     .from('pedidos')
-    .update({ comentario_staff: comentario.trim() })
+    .update({ comentario_staff: JSON.stringify(lista) })
     .eq('id', req.params.id)
     .select()
     .single();
-  if (error) return res.status(404).json({ error: 'Pedido no encontrado.' });
+
+  if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true, pedido: data });
 });
 
