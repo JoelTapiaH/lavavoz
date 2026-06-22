@@ -58,7 +58,7 @@ Formato exacto:
         hora_entrega: pedidoData.horaEntrega || null,
         notas: pedidoData.notas || null,
         transcript_original: transcript,
-        estado: 'iniciado',
+        estado: 'pendiente',
       }])
       .select()
       .single();
@@ -77,7 +77,7 @@ Formato exacto:
 router.patch('/:id/estado', async (req, res) => {
   const { id } = req.params;
   const { estado } = req.body;
-  const estadosValidos = ['iniciado', 'finalizado'];
+  const estadosValidos = ['pendiente', 'en_proceso', 'listo', 'entregado'];
 
   if (!estadosValidos.includes(estado)) {
     return res.status(400).json({ error: 'Estado inválido.' });
