@@ -350,13 +350,19 @@ function setupRecognition() {
   r.lang = 'es-PE';
   r.continuous = !isSafari;
   r.interimResults = true;
+  let lastFinalIdx = -1;
   r.onresult = (e) => {
-    let final = '', interim = '';
+    let interim = '';
     for (let i = 0; i < e.results.length; i++) {
-      if (e.results[i].isFinal) final += e.results[i][0].transcript + ' ';
-      else interim = e.results[i][0].transcript;
+      if (e.results[i].isFinal) {
+        if (i > lastFinalIdx) {
+          transcriptFinal += e.results[i][0].transcript + ' ';
+          lastFinalIdx = i;
+        }
+      } else {
+        interim = e.results[i][0].transcript;
+      }
     }
-    transcriptFinal = final;
     const display = transcriptFinal + interim;
     const el = document.getElementById('transcript');
     el.innerHTML = display
@@ -368,7 +374,7 @@ function setupRecognition() {
   };
   r.onerror = (e) => { if (e.error !== 'no-speech') toast('Error: ' + e.error); };
   r.onend = () => {
-    if (recognition?._active && !isSafari) r.start();
+    if (recognition?._active && !isSafari) { lastFinalIdx = -1; r.start(); }
     else if (recognition?._active && isSafari) {
       isListening = false;
       setStatus('idle');
