@@ -19,7 +19,7 @@ router.post('/', async (req, res) => {
   try {
     // 1️⃣ Llamar a Claude para interpretar el pedido
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 512,
       system: `Eres el asistente de una lavandería profesional.
 Extrae los datos de pedidos dictados por voz y responde SOLO con JSON válido, sin markdown ni explicaciones.
