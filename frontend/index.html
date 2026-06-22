@@ -354,7 +354,7 @@ function setupRecognition() {
     let final = '', interim = '';
     for (let i = 0; i < e.results.length; i++) {
       if (e.results[i].isFinal) final += e.results[i][0].transcript + ' ';
-      else interim += e.results[i][0].transcript;
+      else interim = e.results[i][0].transcript;
     }
     transcriptFinal = final;
     const display = transcriptFinal + interim;
